@@ -63,9 +63,6 @@ describe("WeightedArbitrator", function () {
 
   describe("on creation", async () => {
     it("Should set the correct total arbitration cost", async () => {
-      const numberOfArbitrators =
-        await weightedArbitrator.getNumberOfArbitrators();
-
       expect(await weightedArbitrator.arbitrationCost(0x85)).to.equal(
         toEther(arbitratorFee * numberOfArbitrators)
       );
@@ -96,7 +93,7 @@ describe("WeightedArbitrator", function () {
       expect(dispute.status).to.eq(0);
       expect(dispute.subDisputeIDs.length).to.eq(5);
     });
-    it("Checks IDs of sub-disputes assuming arbitrators have not created any independent disputes before ", async () => {
+    it("Checks IDs of sub-disputes assuming arbitrators have not created any substantive disputes before ", async () => {
       await weightedArbitrator
         .connect(arbitrable)
         .createDispute(choices, arbitratorExtraData, {
@@ -108,7 +105,7 @@ describe("WeightedArbitrator", function () {
         expect(dispute.subDisputeIDs[i]).to.eq(0);
       }
     });
-    it("Checks IDs of sub-disputes assuming some arbitrators could have created independent disputes", async () => {
+    it("Checks IDs of sub-disputes assuming some arbitrators could have created substantive disputes", async () => {
       // this dispute is created to differentiate dispute's indexes in arbitrator and weighted arbitrator contracts
       await authorizedArbitrators[2]
         .connect(other)
