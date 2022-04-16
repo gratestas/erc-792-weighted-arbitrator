@@ -1,4 +1,11 @@
-//SPDX-License-Identifier: Unlicense
+/**
+ * @authors: [@ferittuncer, @hbarcelos]
+ * @reviewers: []
+ * @auditors: []
+ * @bounties: []
+ * @deployments: []
+ * SPDX-License-Identifier: MIT
+ */
 pragma solidity ^0.8.9;
 
 import "@kleros/erc-792/contracts/IArbitrator.sol";
