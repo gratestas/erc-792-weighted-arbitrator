@@ -9,6 +9,7 @@
     "hardhat": "^2.9.3"
   },
   "dependencies": {
-    "@kleros/erc-792": "^8.0.0"
+    "@kleros/erc-792": "^8.0.0",
+    "@openzeppelin/contracts": "^4.5.0"
   }
 }
