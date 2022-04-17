@@ -145,5 +145,52 @@ describe("WeightedArbitrator", function () {
         .arbitrated;
       expect(arbitrated).to.eq(weightedArbitrator.address);
     });
+    it("authorized arbitrators rule dispute", async () => {
+      // this dispute is created to differentiate dispute's indexes in arbitrator and weighted arbitrator contracts
+      await authorizedArbitrators[0]
+        .connect(other)
+        .createDispute(choices, arbitratorExtraData, {
+          value: toEther(arbitratorFee),
+        });
+      let arbitrated = (await authorizedArbitrators[0].disputes(0)).arbitrated;
+      expect(arbitrated).to.eq(other.address);
+
+      await weightedArbitrator
+        .connect(arbitrable)
+        .createDispute(choices, arbitratorExtraData, {
+          value: toEther(totalArbitrationCost),
+        });
+
+      const parentDispute = await weightedArbitrator.getDisputeByID(0);
+      const subDisputeID = parentDispute.subDisputeIDs[0];
+      arbitrated = (await authorizedArbitrators[0].disputes(subDisputeID))
+        .arbitrated;
+      expect(arbitrated).to.eq(weightedArbitrator.address);
+    });
+  });
+  describe("rule dispute", async () => {
+    it("authorized arbitrators rule", async () => {
+      await weightedArbitrator
+        .connect(arbitrable)
+        .createDispute(choices, arbitratorExtraData, {
+          value: toEther(totalArbitrationCost),
+        });
+
+      const dispute = await weightedArbitrator.getDisputeByID(0);
+      await authorizedArbitrators[0].rule(0, 1);
+      await authorizedArbitrators[1].rule(0, 0);
+      await authorizedArbitrators[2].rule(0, 1);
+      await authorizedArbitrators[3].rule(0, 1);
+      await authorizedArbitrators[4].rule(0, 0);
+
+      const rule0 = await weightedArbitrator.getRulingByArbitrator(
+        authorizedArbitrators[0].address
+      );
+      console.log("ruling by arbitrator0", rule0);
+      const rule1 = await weightedArbitrator.getRulingByArbitrator(
+        authorizedArbitrators[1].address
+      );
+      console.log("ruling by arbitrator0", rule1);
+    });
   });
 });
