@@ -57,7 +57,7 @@ describe("WeightedArbitrator", function () {
         centralizedArbitrator_5.address,
       ]
     );
-    numberOfArbitrators = await weightedArbitrator.getNumberOfArbitrators();
+    numberOfArbitrators = await weightedArbitrator.getArbitratorCount();
     totalArbitrationCost = numberOfArbitrators * arbitratorFee;
   });
 
@@ -170,18 +170,58 @@ describe("WeightedArbitrator", function () {
   });
   describe("rule dispute", async () => {
     it("authorized arbitrators rule", async () => {
+      let arbitrable_balance;
+      arbitrable_balance = await ethers.provider.getBalance(arbitrable.address);
+      console.log("balance of arbitrable", arbitrable_balance.toString());
+
       await weightedArbitrator
         .connect(arbitrable)
         .createDispute(choices, arbitratorExtraData, {
           value: toEther(totalArbitrationCost),
         });
 
+      arbitrable_balance = await ethers.provider.getBalance(arbitrable.address);
+      console.log("balance of arbitrable", arbitrable_balance.toString());
+
       const dispute = await weightedArbitrator.getDisputeByID(0);
+      console.log("arbitrated", dispute.arbitrated);
+      const arbitrator1_balanceBefore = await ethers.provider.getBalance(
+        authorizedArbitrators[0].address
+      );
+      console.log(
+        "balance of arbitrator1 before",
+        arbitrator1_balanceBefore.toString()
+      );
+      const wArbitrator_balanceBefore = await ethers.provider.getBalance(
+        weightedArbitrator.address
+      );
+      console.log(
+        "balance of wArbitrator before",
+        wArbitrator_balanceBefore.toString()
+      );
+
       await authorizedArbitrators[0].rule(0, 1);
-      await authorizedArbitrators[1].rule(0, 0);
+
+      const arbitrator1_balanceAfter = await ethers.provider.getBalance(
+        authorizedArbitrators[0].address
+      );
+      console.log("balance of a1 after", arbitrator1_balanceAfter.toString());
+
+      await authorizedArbitrators[1].rule(0, 2);
       await authorizedArbitrators[2].rule(0, 1);
       await authorizedArbitrators[3].rule(0, 1);
-      await authorizedArbitrators[4].rule(0, 0);
+      await authorizedArbitrators[4].rule(0, 2);
+
+      const wArbitrator_balanceAfter = await ethers.provider.getBalance(
+        weightedArbitrator.address
+      );
+      console.log(
+        "balance of wArbitrator after",
+        wArbitrator_balanceAfter.toString()
+      );
+
+      arbitrable_balance = await ethers.provider.getBalance(arbitrable.address);
+      console.log("balance of arbitrable", arbitrable_balance.toString());
 
       const rule0 = await weightedArbitrator.getRulingByArbitrator(
         authorizedArbitrators[0].address
@@ -191,6 +231,13 @@ describe("WeightedArbitrator", function () {
         authorizedArbitrators[1].address
       );
       console.log("ruling by arbitrator0", rule1);
+
+      console.log("wArbitrator", weightedArbitrator.address);
+      console.log("arbitrable", arbitrable.address);
+      console.log("deployer", deployer.address);
+      console.log("arbitrator wallet", arbitrator.address);
+      console.log("other wallet", other.address);
+      console.log("arbitrator5", authorizedArbitrators[4].address);
     });
   });
 });

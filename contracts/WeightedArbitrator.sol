@@ -4,17 +4,27 @@ pragma solidity ^0.8.9;
 import "@kleros/erc-792/contracts/IArbitrable.sol";
 import "@kleros/erc-792/contracts/erc-1497/IEvidence.sol";
 import "@kleros/erc-792/contracts/IArbitrator.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "hardhat/console.sol";
 
 /** @title Weighted Arbitrator
  *   @dev This is a weighted arbitrator that collects rulings from multiple arbitrators and fuses those rulings into one rulling taking into account the weight of each one.
  */
 contract WeightedArbitrator is IArbitrator, IArbitrable {
+    using SafeMath for uint256;
     address public owner = msg.sender;
     uint256 public feePerArbitrator;
+    uint256 public collectedRulingCount;
     IArbitrator[] public authorizedArbitrators;
     mapping(address => bool) public isAuthorizedArbitrator;
+    mapping(IArbitrator => ArbitratorStruct) public rulingByArbitrator;
 
+    /* mapping(IArbitrator => AuthorizedArbitrator)
+        public authorizedArbitratorToRuling; */
+    struct ArbitratorStruct {
+        uint256 ruling;
+        uint256 weight;
+    }
     struct DisputeStruct {
         IArbitrable arbitrated;
         uint256 choices;
@@ -50,7 +60,7 @@ contract WeightedArbitrator is IArbitrator, IArbitrable {
     /** @dev Return the total number of authorized arbitrators.
      *  @return numberOfArbitrators
      */
-    function getNumberOfArbitrators() public view returns (uint256) {
+    function getArbitratorCount() public view returns (uint256) {
         return authorizedArbitrators.length;
     }
 
@@ -110,19 +120,58 @@ contract WeightedArbitrator is IArbitrator, IArbitrable {
         return disputeByID[_disputeID];
     }
 
+    function getRulingByArbitrator(IArbitrator _arbitrator)
+        external
+        view
+        returns (uint256, uint256)
+    {
+        ArbitratorStruct memory ruling = rulingByArbitrator[_arbitrator];
+        return (ruling.ruling, ruling.weight);
+    }
+
     function rule(uint256 _disputeID, uint256 _ruling) public override {
-        DisputeStruct storage dispute = disputes[_disputeID];
-        require(_ruling <= dispute.choices, "Invalid ruling.");
+        require(_ruling <= disputes[_disputeID].choices, "Invalid ruling.");
         require(
-            dispute.status != DisputeStatus.Solved,
+            disputes[_disputeID].status != DisputeStatus.Solved,
             "The dispute must not be solved already."
         );
+        ArbitratorStruct memory arbitrator = ArbitratorStruct({
+            ruling: _ruling,
+            weight: 1
+        });
+        collectedRulingCount++;
+        console.log("vote count", collectedRulingCount);
+        rulingByArbitrator[IArbitrator(msg.sender)] = arbitrator;
 
-        dispute.ruling = _ruling;
-        dispute.status = DisputeStatus.Solved;
+        if (collectedRulingCount == authorizedArbitrators.length) {
+            uint256 weightedRuling = _calculateWeightedRuling();
+            console.log("weighted ruling", weightedRuling);
 
-        payable(msg.sender).transfer(dispute.fee); // Avoid blocking.
-        dispute.arbitrated.rule(_disputeID, _ruling);
+            disputes[_disputeID].ruling = weightedRuling;
+            disputes[_disputeID].status = DisputeStatus.Solved; //should be updated only after all rulings collected
+            console.log("dispute.status solved");
+            console.log("sender", msg.sender);
+            //payable(msg.sender).transfer(disputes[_disputeID].fee); // Avoid blocking.
+            //dispute.arbitrated.rule(_disputeID, weightedRuling);
+        }
+    }
+
+    function _calculateWeightedRuling()
+        private
+        view
+        returns (uint256 weightedRuling)
+    {
+        for (uint256 i = 0; i < authorizedArbitrators.length; i++) {
+            ArbitratorStruct memory arbitrator = rulingByArbitrator[
+                authorizedArbitrators[i]
+            ];
+            console.log("arbitrator #", i);
+            console.log("arbitrator ruling", arbitrator.ruling);
+            console.log("arbitrator weight", arbitrator.weight);
+            weightedRuling = weightedRuling.add(
+                arbitrator.ruling.mul(arbitrator.weight)
+            );
+        }
     }
 
     /**
