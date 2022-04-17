@@ -5,7 +5,6 @@ import "@kleros/erc-792/contracts/IArbitrable.sol";
 import "@kleros/erc-792/contracts/erc-1497/IEvidence.sol";
 import "@kleros/erc-792/contracts/IArbitrator.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "hardhat/console.sol";
 
 /** @title Weighted Arbitrator
  *   @dev This is a weighted arbitrator that collects rulings from multiple arbitrators and fuses those rulings into one rulling taking into account the weight of each one.
@@ -16,11 +15,10 @@ contract WeightedArbitrator is IArbitrator, IArbitrable {
     uint256 public feePerArbitrator;
     uint256 public collectedRulingCount;
     IArbitrator[] public authorizedArbitrators;
-    mapping(address => bool) public isAuthorizedArbitrator;
+    mapping(IArbitrator => bool) public isAuthorizedArbitrator;
     mapping(IArbitrator => ArbitratorStruct) public rulingByArbitrator;
+    mapping(uint256 => DisputeStruct) disputeByID;
 
-    /* mapping(IArbitrator => AuthorizedArbitrator)
-        public authorizedArbitratorToRuling; */
     struct ArbitratorStruct {
         uint256 ruling;
         uint256 weight;
@@ -30,45 +28,17 @@ contract WeightedArbitrator is IArbitrator, IArbitrable {
         uint256 choices;
         uint256 fee;
         uint256 ruling;
-        DisputeStatus status;
         uint256[] subDisputeIDs;
+        DisputeStatus status;
     }
 
     DisputeStruct[] public disputes;
-    mapping(uint256 => DisputeStruct) disputeByID;
 
     error InsufficientPayment(uint256 _available, uint256 _required);
 
     constructor(uint256 _feePerArbitrator, IArbitrator[] memory _arbitrators) {
         feePerArbitrator = _feePerArbitrator;
         _addArbitrators(_arbitrators);
-    }
-
-    function _addArbitrators(IArbitrator[] memory _arbitrators) private {
-        for (uint256 i = 0; i < _arbitrators.length; i++) {
-            authorizedArbitrators.push(_arbitrators[i]);
-        }
-    }
-
-    /** @dev Add an arbitrator to the list of authorized arbitrators. Must be called only by owner.
-     *  @param _arbitrator address of the arbitrator contract.
-     */
-    function addArbitrator(IArbitrator _arbitrator) public onlyOwner {
-        authorizedArbitrators.push(_arbitrator);
-    }
-
-    /** @dev Return the total number of authorized arbitrators.
-     *  @return numberOfArbitrators
-     */
-    function getArbitratorCount() public view returns (uint256) {
-        return authorizedArbitrators.length;
-    }
-
-    /** @dev Return arbitrator by its index from the list of authorized arbitrators.
-     *  @param _index index of an arbitrator in the list.
-     */
-    function getArbitrator(uint256 _index) public view returns (IArbitrator) {
-        return authorizedArbitrators[_index];
     }
 
     /** @dev Create a dispute. Must be called by the arbitrable contract.
@@ -107,29 +77,11 @@ contract WeightedArbitrator is IArbitrator, IArbitrable {
         emit DisputeCreation(disputeID, IArbitrable(msg.sender));
     }
 
-    /** @dev Return the dispute bu its ID.
-     *  Must be paid at least arbitrationCost().
-     *  @param _disputeID ID of the dispute.
-     *  @return dispute
-     */
-    function getDisputeByID(uint256 _disputeID)
+    function rule(uint256 _disputeID, uint256 _ruling)
         public
-        view
-        returns (DisputeStruct memory)
+        override
+        onlyAuthorizedArbitrator
     {
-        return disputeByID[_disputeID];
-    }
-
-    function getRulingByArbitrator(IArbitrator _arbitrator)
-        external
-        view
-        returns (uint256, uint256)
-    {
-        ArbitratorStruct memory ruling = rulingByArbitrator[_arbitrator];
-        return (ruling.ruling, ruling.weight);
-    }
-
-    function rule(uint256 _disputeID, uint256 _ruling) public override {
         require(_ruling <= disputes[_disputeID].choices, "Invalid ruling.");
         require(
             disputes[_disputeID].status != DisputeStatus.Solved,
@@ -140,19 +92,21 @@ contract WeightedArbitrator is IArbitrator, IArbitrable {
             weight: 1
         });
         collectedRulingCount++;
-        console.log("vote count", collectedRulingCount);
         rulingByArbitrator[IArbitrator(msg.sender)] = arbitrator;
 
         if (collectedRulingCount == authorizedArbitrators.length) {
             uint256 weightedRuling = _calculateWeightedRuling();
-            console.log("weighted ruling", weightedRuling);
 
             disputes[_disputeID].ruling = weightedRuling;
             disputes[_disputeID].status = DisputeStatus.Solved; //should be updated only after all rulings collected
-            console.log("dispute.status solved");
-            console.log("sender", msg.sender);
-            //payable(msg.sender).transfer(disputes[_disputeID].fee); // Avoid blocking.
-            //dispute.arbitrated.rule(_disputeID, weightedRuling);
+            // disputes[_disputeID].arbitrated.rule(_disputeID, weightedRuling);
+        }
+    }
+
+    function _addArbitrators(IArbitrator[] memory _arbitrators) private {
+        for (uint256 i = 0; i < _arbitrators.length; i++) {
+            authorizedArbitrators.push(_arbitrators[i]);
+            isAuthorizedArbitrator[_arbitrators[i]] = true;
         }
     }
 
@@ -165,9 +119,6 @@ contract WeightedArbitrator is IArbitrator, IArbitrable {
             ArbitratorStruct memory arbitrator = rulingByArbitrator[
                 authorizedArbitrators[i]
             ];
-            console.log("arbitrator #", i);
-            console.log("arbitrator ruling", arbitrator.ruling);
-            console.log("arbitrator weight", arbitrator.weight);
             weightedRuling = weightedRuling.add(
                 arbitrator.ruling.mul(arbitrator.weight)
             );
@@ -246,8 +197,47 @@ contract WeightedArbitrator is IArbitrator, IArbitrable {
         ruling = disputes[_disputeID].ruling;
     }
 
-    modifier onlyOwner() {
-        require(msg.sender == owner, "can only be called by the owner.");
+    /** @dev Return the total number of authorized arbitrators.
+     *  @return numberOfArbitrators
+     */
+    function getArbitratorCount() public view returns (uint256) {
+        return authorizedArbitrators.length;
+    }
+
+    /** @dev Return arbitrator by its index from the list of authorized arbitrators.
+     *  @param _index index of an arbitrator in the list.
+     */
+    function getArbitrator(uint256 _index) public view returns (IArbitrator) {
+        return authorizedArbitrators[_index];
+    }
+
+    /** @dev Return the dispute bu its ID.
+     *  Must be paid at least arbitrationCost().
+     *  @param _disputeID ID of the dispute.
+     *  @return dispute
+     */
+    function getDisputeByID(uint256 _disputeID)
+        public
+        view
+        returns (DisputeStruct memory)
+    {
+        return disputeByID[_disputeID];
+    }
+
+    function getRulingByArbitrator(IArbitrator _arbitrator)
+        public
+        view
+        returns (uint256, uint256)
+    {
+        ArbitratorStruct memory arbitrator = rulingByArbitrator[_arbitrator];
+        return (arbitrator.ruling, arbitrator.weight);
+    }
+
+    modifier onlyAuthorizedArbitrator() {
+        require(
+            isAuthorizedArbitrator[IArbitrator(msg.sender)],
+            "can only be called by the authorized arbitrator"
+        );
         _;
     }
 }
