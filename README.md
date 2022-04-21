@@ -36,6 +36,6 @@ cd erc-792-weighted-arbitrator
 // Install the dependencies
 yarn install
 
-// Start the development server
+// Run test
 npx hardhat test
 ```
