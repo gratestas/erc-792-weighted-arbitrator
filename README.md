@@ -14,7 +14,7 @@ A simple weighted average equation is used to fuse all rulings collected from a 
 
 where:</br>
 <img src="https://render.githubusercontent.com/render/math?math=\Large\r_i">- ruling of `i-th` arbitrator </br>
-<img src="https://render.githubusercontent.com/render/math?math=\Large\w_i">- weighting factors allocated for `i-th` arbitrator
+<img src="https://render.githubusercontent.com/render/math?math=\Large\w_i">- weighting factor allocated for `i-th` arbitrator
 
 
 #### Final decision
