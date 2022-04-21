@@ -5,7 +5,7 @@ Weighted Arbitrator implements `IArbitrator` and `IArbitrable` interfaces derive
 </br>
 </br>
 </br>     
-## Weighted Rulings Mechanism
+## Weighted Ruling Mechanism
 A simple weighted average equation is used to fuse all rulings collected from a set of authorized arbitrators into one final weighted ruling, taking into account the ruling power of each. 
 
 <div align="center"><img src="https://latex.codecogs.com/gif.latex?%5Clarge%5Cmathit%7BweightedRuling%7D%3D%5CLarge%5Cfrac%7B%5Csum_%7Bi%3D0%7D%5E%7BN%7D%7Br_iw_i%7D%7D%7B%5Csum_%7Bi%3D0%7D%5E%7BN%7D%7Bw_i%7D%20%7D"></div>
