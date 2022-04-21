@@ -7,7 +7,8 @@ Weighted Arbitrator implements `IArbitrator` and `IArbitrable` interfaces derive
 </br>     
 ## Weighted Ruling Mechanism
 A simple weighted average equation is used to fuse all rulings collected from a set of authorized arbitrators into one final weighted ruling, taking into account the ruling power of each. 
-
+</br>
+</br>
 <div align="center"><img src="https://latex.codecogs.com/gif.latex?%5Clarge%5Cmathit%7BweightedRuling%7D%3D%5CLarge%5Cfrac%7B%5Csum_%7Bi%3D0%7D%5E%7BN%7D%7Br_iw_i%7D%7D%7B%5Csum_%7Bi%3D0%7D%5E%7BN%7D%7Bw_i%7D%20%7D"></div>
 </br>
 <div align="center"><img src="https://latex.codecogs.com/gif.latex?where%5C%3A%20%5C%3A%20%5Csum_%7Bi%3D0%7D%5E%7BN%7D%7Bw_i%7D%3D100"></div>
@@ -19,8 +20,10 @@ where:</br>
 
 #### Final decision
 For the sake of simplicity, the `numberOfChoices` is kept to be limited by 2. A `quota` (the threshold required to pass for the majority) state variable is introduced to determine the final decision.
-
-<div align="center"><img src="https://latex.codecogs.com/gif.latex?finalRulig%3D%5Cleft%5C%7B%5Cbegin%7Bmatrix%7D%202%26%5Ctext%7Bif%20%24weightedRuling%20%3E%20quota%24%7D%20%5C%5C%201%26%5Ctext%7Botherwise%7D%20%5Cend%7Bmatrix%7D%5Cright."></div>
+</br>
+</br>
+</br>
+<div align="center"><img src="https://latex.codecogs.com/gif.latex?%5Clarge%5Ctextit%7BfinalRuling%7D%3D%5Clarge%5Cleft%5C%7B%5Cbegin%7Bmatrix%7D%202%20%26%5Ctext%7Bif%20%24wieghtedRuling%3Equota%24%7D%20%5C%5C%201%20%26%20%5Ctext%7Botherwise.%7D%20%5Cend%7Bmatrix%7D%5Cright."></div>
 </br>
 <div align="center"><img src="https://latex.codecogs.com/gif.latex?where%5C%3A%20%5C%3A%20quota%5Cin%20%2850%2C100%29"></div>
 
